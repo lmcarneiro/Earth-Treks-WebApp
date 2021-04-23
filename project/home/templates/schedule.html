@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Earth Treks Reminders</h1>
+<br>
+
+<!-- Scheduling form -->
+<h3>Set up your scheduler!</h3>
+
+<form class="form-control" role="form" method="post" action="/schedule">
+    {{ form.csrf_token }}
+    <p>
+        {{ form.time_slot }}
+        <span class="error">
+            {% if form.time_slot.errors %}
+                {% for error in form.time_slot.errors %}
+                    {{ error }}
+                {% endfor %}
+            {% endif %}
+        </span>
+    </p>
+    <button class="btn btn-sm btn-success" type="submit">Submit</button>
+<form>
+<p>Click <a href="/logout">here</a> to logout.</p>
+
+{% endblock %}

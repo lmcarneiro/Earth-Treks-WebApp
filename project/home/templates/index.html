@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Earth Treks Reminders</h1>
+<br>
+
+<!-- Scheduling form -->
+<h3>Set up your scheduler!</h3>
+
+<form class="form-message" role="form" method="post" action="/">
+    {{ form.csrf_token }}
+    <p>
+        {{ form.location(placeholder="Location") }}
+        <span class="error">
+            {% if form.location.errors %}
+                {% for error in form.location.errors %}
+                    {{ error }}
+                {% endfor %}
+            {% endif %}
+        </span>
+    </p>
+    <p>
+        {{ form.day(placeholder="Date") }}
+        <span class="error">
+            {% if form.day.errors %}
+                {% for error in form.day.errors %}
+                    {{ error }}
+                {% endfor %}
+            {% endif %}
+        </span>
+    </p>
+    <button class="btn btn-sm btn-success" type="submit">Submit</button>
+<form>
+<p>Click <a href="/logout">here</a> to logout.</p>
+
+{% endblock %}
