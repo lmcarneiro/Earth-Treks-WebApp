@@ -13,8 +13,8 @@ import pytz
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 scheduler = BlockingScheduler()
+scheduler.start()
 
-@scheduler.scheduled_job('interval', minutes=1)
 def scraper():
     tz = pytz.timezone('America/New_York')
     now = datetime.now(tz)
@@ -151,5 +151,3 @@ def scraper():
             print('No spots opened up for you, crontab will stop looking.')
         else:
             print('Crontab is running this script every minute until a spot opens up.')
-
-scheduler.start()

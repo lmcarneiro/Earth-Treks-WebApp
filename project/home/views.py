@@ -3,7 +3,7 @@
 #### imports ####
 #################
 
-from project import db # pragma: no cover
+from project import db#, scheduler  # pragma: no cover
 from project.models import Schedule#, Location, User  # pragma: no cover
 from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
 from flask import render_template, Blueprint, request,\
@@ -14,8 +14,9 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-from clock import scraper, scheduler
+from scraper import scraper
 import pytz
+from clock import scheduler
 
 ################
 #### config ####
@@ -133,8 +134,6 @@ def schedule():
         jobs = scheduler.get_jobs()
         jobs = str(jobs)
         job.modify(next_run_time=datetime.now())
-        # sched.test = 'test'
-        # db.session.commit()
         return redirect(url_for('home.home'))
     else:
         return render_template('schedule.html', form=form, error=error)

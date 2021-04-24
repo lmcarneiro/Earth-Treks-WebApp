@@ -11,7 +11,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import poplib
 from email import parser
-from project import db
 
 
 def reminder(receiver_email, message):
