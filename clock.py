@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from reminder import reminder
-from project import db, scheduler
+from project import db#, scheduler
 from project.models import Schedule, User
 import pytz
 
