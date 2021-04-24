@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-from project.scraper import scraper
+from clock import scraper
 import pytz
 
 ################
