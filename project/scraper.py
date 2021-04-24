@@ -16,8 +16,10 @@ def scraper():
     now = datetime.now(tz)
     today = date(now.year, now.month, now.day)
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
-    # sched.test = 'test'
-    # db.session.commit()
+    jobs = scheduler.get_jobs()
+    jobs = str(jobs)
+    sched.test = jobs
+    db.session.commit()
     users = User.query.order_by(User.id)
     receiver = users.filter_by(id=sched.name_id)[0].email
     started_on = sched.today

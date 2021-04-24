@@ -133,8 +133,6 @@ def schedule():
         jobs = scheduler.get_jobs()
         jobs = str(jobs)
         job.modify(next_run_time=datetime.now())
-        sched.test = jobs
-        db.session.commit()
         return redirect(url_for('home.home'))
     else:
         return render_template('schedule.html', form=form, error=error)
