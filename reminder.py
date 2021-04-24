@@ -12,7 +12,6 @@ from email.mime.multipart import MIMEMultipart
 import poplib
 from email import parser
 from project import db
-from project.models import Test
 
 
 def reminder(receiver_email, message):
@@ -21,10 +20,6 @@ def reminder(receiver_email, message):
     port = 587  # For starttls
     sender_email = "earthtreksreminders@gmail.com"
     password = "Barefoot3*"
-    
-    testing = Test(test=receiver_email)
-    db.session.add(testing)
-    db.session.commit()
     
     # Create a secure SSL context
     context = ssl.create_default_context()
