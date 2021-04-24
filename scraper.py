@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from reminder import reminder
-from project import scheduler, db
+from project import db#, scheduler
 from project.models import Schedule, User
 import pytz
 
@@ -16,9 +16,9 @@ def scraper():
     now = datetime.now(tz)
     today = date(now.year, now.month, now.day)
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
-    jobs = scheduler.get_jobs()
-    jobs = str(jobs)
-    sched.test = jobs
+    # jobs = scheduler.get_jobs()
+    # jobs = str(jobs)
+    # sched.test = jobs
     db.session.commit()
     users = User.query.order_by(User.id)
     receiver = users.filter_by(id=sched.name_id)[0].email
@@ -147,4 +147,3 @@ def scraper():
             print('No spots opened up for you, crontab will stop looking.')
         else:
             print('Crontab is running this script every minute until a spot opens up.')
-            
