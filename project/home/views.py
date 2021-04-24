@@ -9,13 +9,13 @@ from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
 from flask import render_template, Blueprint, request,\
     url_for, flash, redirect  # pragma: no cover
 from flask_login import login_required  # pragma: no cover
-from datetime import date
+from datetime import datetime, date
 import requests
 from bs4 import BeautifulSoup
 import re
 import json
 from project.scraper import scraper
-from datetime import datetime
+import pytz
 
 ################
 #### config ####
@@ -44,7 +44,9 @@ loc_guids = {
         'rv':['Rockville', '07d503eb2ba04792a095a56cb5fe1c8e'],
         'tm':['Timonium', '65529b9f9ddb4282924cf2a782c436d9']}
 
-today = date.today()
+tz = pytz.timezone('America/New_York')
+now = datetime.now(tz)
+today = date(now.year, now.month, now.day)
 
 # use decorators to link the function to a url
 @home_blueprint.route('/', methods=["GET", "POST"])
@@ -52,7 +54,6 @@ today = date.today()
 def home():
     error = None
     form = LocationForm(request.form)
-    #Consecutive calls to location form doesn't get added.    
     if form.validate_on_submit():
         look_for = form.day.data
         loc = form.location.data

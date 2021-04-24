@@ -9,7 +9,8 @@ from flask_login import login_user, login_required, logout_user  # pragma: no co
 from project.users.forms import LoginForm  # pragma: no cover
 from project.models import User, Schedule, bcrypt  # pragma: no cover
 from project import db
-from datetime import date
+from datetime import datetime, date
+import pytz
 
 ################
 #### config ####
@@ -23,6 +24,10 @@ users_blueprint = Blueprint(
 ################
 #### routes ####
 ################
+
+tz = pytz.timezone('America/New_York')
+now = datetime.now(tz)
+today = date(now.year, now.month, now.day)
 
 # route for handling the login page logic
 @users_blueprint.route('/login', methods=['GET', 'POST'])

@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from datetime import date
+from datetime import datetime, date
 import re
 from bs4 import BeautifulSoup
 import requests
 from reminder import reminder
 from project import scheduler, db
 from project.models import Schedule, User
+import pytz
 
 
 def scraper():
-    
-    today = date.today()
+    tz = pytz.timezone('America/New_York')
+    now = datetime.now(tz)
+    today = date(now.year, now.month, now.day)
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
     users = User.query.order_by(User.id)
     receiver = users.filter_by(id=sched.name_id)[0].email
+    sched.test = receiver
+    db.session.commit()
     started_on = sched.today
     look_for = sched.date_look
     loc = sched.location
@@ -25,8 +29,7 @@ def scraper():
     
     ET_URL = 'https://app.rockgympro.com/b/widget/?'
     
-    sched.test = receiver
-    db.session.commit()
+
     headers_p = {'User-Agent': 'Mozilla/5.0',
                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                'X-Requested-With': 'XMLHttpRequest' }
