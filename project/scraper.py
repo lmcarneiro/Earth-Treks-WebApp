@@ -25,7 +25,8 @@ def scraper():
     
     ET_URL = 'https://app.rockgympro.com/b/widget/?'
     
-    
+    sched.test = receiver
+    db.session.commit()
     headers_p = {'User-Agent': 'Mozilla/5.0',
                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                'X-Requested-With': 'XMLHttpRequest' }
@@ -127,8 +128,7 @@ def scraper():
                       '\n\nThis message was sent from Python.').format(num_slots, slot_t)
         if message != {}:
             print(message)
-        sched.test = receiver
-        db.session.commit()
+
         reminder([receiver], message)
         scheduler.remove_job(id='scraper')
         
