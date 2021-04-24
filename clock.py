@@ -5,7 +5,7 @@ from datetime import datetime, date
 import re
 from bs4 import BeautifulSoup
 import requests
-from reminder import reminder
+import reminder
 from project import db#, scheduler
 from project.models import Schedule, User
 import pytz
@@ -138,7 +138,7 @@ def scraper():
         if message != {}:
             print(message)
 
-        reminder([receiver], message)
+        reminder.reminder([receiver], message)
         scheduler.remove_job(id='scraper')
         
     else:
