@@ -14,9 +14,9 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-from scraper import scraper
+#from scraper import scraper
 import pytz
-from clock import scheduler
+from clock import scheduler, scraper
 
 ################
 #### config ####
