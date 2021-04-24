@@ -3,7 +3,7 @@
 #### imports ####
 #################
 
-from project import db#, scheduler  # pragma: no cover
+from project import db # pragma: no cover
 from project.models import Schedule#, Location, User  # pragma: no cover
 from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
 from flask import render_template, Blueprint, request,\
