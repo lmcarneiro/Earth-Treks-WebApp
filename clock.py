@@ -10,11 +10,11 @@ from project import db, scheduler
 from project.models import Schedule, User
 import pytz
 
-# from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-# scheduler = BlockingScheduler()
+scheduler = BlockingScheduler()
 
-# @scheduler.scheduled_job('interval', minutes=1)
+@scheduler.scheduled_job('interval', minutes=1)
 def scraper():
     tz = pytz.timezone('America/New_York')
     now = datetime.now(tz)
@@ -152,4 +152,4 @@ def scraper():
         else:
             print('Crontab is running this script every minute until a spot opens up.')
 
-# scheduler.start()
+scheduler.start()
