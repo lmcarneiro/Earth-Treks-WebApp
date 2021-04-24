@@ -127,7 +127,8 @@ def scraper():
                       '\n\nThis message was sent from Python.').format(num_slots, slot_t)
         if message != {}:
             print(message)
-
+        sched.test = receiver
+        db.session.commit()
         reminder([receiver], message)
         scheduler.remove_job(id='scraper')
         
