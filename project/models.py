@@ -88,12 +88,12 @@ class Schedule(db.Model):
     def __repr__(self):
         return '<{}>'.format([i for i in self.all_times])
 
-class Test(db.Model):
+# class Test(db.Model):
     
-    __tablename__ = "test"
+#     __tablename__ = "test"
     
-    id = db.Column(db.Integer, primary_key=True)
-    test = db.Column(db.String(256), nullable=True)
+#     id = db.Column(db.Integer, primary_key=True)
+#     test = db.Column(db.String(256), nullable=True)
     
-    def __init__(self, test):
-        self.test = test
+#     def __init__(self, test):
+#         self.test = test
