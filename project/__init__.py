@@ -7,7 +7,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
-from flask_apscheduler import APScheduler
+#from flask_apscheduler import APScheduler
 import os
 
 ################
@@ -40,5 +40,5 @@ login_manager.login_view = "users.login"
 def load_user(user_id):
     return User.query.filter(User.id == int(user_id)).first()
 
-if __name__ == 'main':
-    app.run(host='0.0.0.0', port=os.environ.get('PORT'))
+# if __name__ == 'main':
+#     app.run(host='0.0.0.0', port=os.environ.get('PORT'))

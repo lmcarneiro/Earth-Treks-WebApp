@@ -14,9 +14,10 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-#from scraper import scraper
+from scraper import scraper
 import pytz
-from clock import scheduler, scraper
+#from clock import scheduler, scraper
+from time import sleep
 
 ################
 #### config ####
@@ -116,6 +117,7 @@ def schedule():
         date = sched.date_look
         slot = sched.all_times[int(form.time_slot.data)]
         sched.time_slot = slot
+        sched.reminder = 'waiting'
         location = sched.location
         db.session.commit()
         flash((
@@ -123,18 +125,48 @@ def schedule():
             "Scheduler is now looking for spots on {0} at {1} at the {2} " +
             "location.").format(date, slot, location)
             )
-        job = scheduler.add_job(
-            func=scraper, 
-            trigger='interval',
-            minutes=1,
-            id='scraper',
-            name='scraper',
-            replace_existing=True 
-        )
-        jobs = scheduler.get_jobs()
-        jobs = str(jobs)
-        job.modify(next_run_time=datetime.now())
-        return redirect(url_for('home.home'))
+        
+        #while
+        # job = scheduler.add_job(
+        #     func=scraper, 
+        #     trigger='interval',
+        #     minutes=1,
+        #     id='scraper',
+        #     name='scraper',
+        #     replace_existing=True 
+        # )
+        # jobs = scheduler.get_jobs()
+        # jobs = str(jobs)
+        # job.modify(next_run_time=datetime.now())
+        return redirect(url_for('home.scrape'))
     else:
         return render_template('schedule.html', form=form, error=error)
-
+    
+@home_blueprint.route('/scraper')
+@login_required
+def scrape():
+    error = None
+    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    reminder = sched.reminder
+    # i = 0
+    # l = []
+    render_template('scraper.html', error=error)
+    while reminder == 'waiting':
+        result = scraper()
+        if result == 'sent':
+            sched.reminder = 'sent'
+            db.session.commit()
+        elif result == 'stop':
+            sched.reminder = 'stop'
+            db.session.commit()
+        sleep(60)
+        reminder = result
+        # l.append(result)
+        # i += 1
+        # if i > 5:
+        #     reminder = 'stop'
+        #     sched.reminder = str(l)
+        #     db.session.commit()
+        # sleep(1)
+    return render_template('scraper.html', error=error)
+        

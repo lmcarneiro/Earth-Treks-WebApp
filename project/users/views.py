@@ -49,7 +49,7 @@ def login():
                                       time_slot=None,
                                       date_look_num=None,
                                       time_slot_num=None,
-                                      test=None)
+                                      reminder=None)
                 db.session.add(user_sched)
                 db.session.commit()
                 flash('You were logged in.')

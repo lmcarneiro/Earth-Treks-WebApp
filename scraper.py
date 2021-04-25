@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from reminder import reminder
-from project import db, scheduler
+#from project import db#, scheduler
 from project.models import Schedule, User
 import pytz
 
@@ -19,7 +19,7 @@ def scraper():
     # jobs = scheduler.get_jobs()
     # jobs = str(jobs)
     # sched.test = jobs
-    db.session.commit()
+    # db.session.commit()
     users = User.query.order_by(User.id)
     receiver = users.filter_by(id=sched.name_id)[0].email
     started_on = sched.today
@@ -135,15 +135,20 @@ def scraper():
             print(message)
 
         reminder([receiver], message)
-        scheduler.remove_job(id='scraper')
+        result = 'sent'
+        #scheduler.remove_job(id='scraper')
         
     else:
         print('This job was started on %s. Today is %s.' %(started_on, str(today)))
         if date_diff < 0:
-            scheduler.remove_job(id='scraper')
+            #scheduler.remove_job(id='scraper')
             message = ('Subject: Your Sign-Up Reminder\n\n'
                        'Sorry! It looks like no spots opened up for you.\nIf you'
                        'would like to try a new date please click here.')
             print('No spots opened up for you, crontab will stop looking.')
+            result = 'stop'
         else:
             print('Crontab is running this script every minute until a spot opens up.')
+            result = 'waiting'
+            
+    return result
