@@ -18,7 +18,7 @@ def reminder(receiver_email, message):
     smtp_server = "smtp.gmail.com"
     port = 587  # For starttls
     sender_email = "earthtreksreminders@gmail.com"
-    password = "Barefoot3*"
+    password = "jprctklwbhmphjtn"
     
     # Create a secure SSL context
     context = ssl.create_default_context()
@@ -45,7 +45,7 @@ def reminder2(receiver_emails, slots):
     for receiver_email in receiver_emails:
     
         sender_email = "earthtreksreminders@gmail.com"
-        password = "Barefoot3*"
+        password = "jprctklwbhmphjtn"
         
         message = MIMEMultipart("alternative")
         message["Subject"] = "Your Sign-Up Reminder"
