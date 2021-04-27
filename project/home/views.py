@@ -3,7 +3,7 @@
 #### imports ####
 #################
 
-from project import db#, scheduler  # pragma: no cover
+from project import db, app#, scheduler  # pragma: no cover
 from project.models import Schedule#, Location, User  # pragma: no cover
 from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
 from flask import render_template, Blueprint, request,\
@@ -18,6 +18,7 @@ from scraper import scraper
 import pytz
 #from clock import scheduler, scraper
 from time import sleep
+from threading import Thread
 
 ################
 #### config ####
@@ -146,27 +147,27 @@ def schedule():
 @login_required
 def scrape():
     error = None
-    sched = Schedule.query.order_by(Schedule.id.desc()).first()
-    reminder = sched.reminder
-    # i = 0
-    # l = []
-    render_template('scraper.html', error=error)
-    while reminder == 'waiting':
-        result = scraper()
-        if result == 'sent':
-            sched.reminder = 'sent'
-            db.session.commit()
-        elif result == 'stop':
-            sched.reminder = 'stop'
-            db.session.commit()
-        sleep(60)
-        reminder = result
-        # l.append(result)
-        # i += 1
-        # if i > 5:
-        #     reminder = 'stop'
-        #     sched.reminder = str(l)
-        #     db.session.commit()
-        # sleep(1)
+    #sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    run_func()
+    # reminder = sched.reminder
+    # while reminder == 'waiting':
+    #     result = scraper()
+    #     if result == 'sent':
+    #         sched.reminder = 'sent'
+    #         db.session.commit()
+    #     elif result == 'stop':
+    #         sched.reminder = 'stop'
+    #         db.session.commit()
+    #     sleep(60)
+    #     reminder = result
     return render_template('scraper.html', error=error)
-        
+
+def run_func():
+    thr = Thread(target=run_async_func, args=[app])
+    thr.start()
+    return thr
+
+def run_async_func(app):
+    with app.app_context():
+        result = scraper()
+        return result
