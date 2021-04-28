@@ -8,7 +8,7 @@ from project.models import Schedule#, Location, User  # pragma: no cover
 from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
 from flask import render_template, Blueprint, request,\
     url_for, flash, redirect  # pragma: no cover
-from flask_login import login_required  # pragma: no cover
+from flask_login import login_required, current_user # pragma: no cover
 from datetime import datetime, date
 import requests
 from bs4 import BeautifulSoup
@@ -16,8 +16,6 @@ import re
 import json
 from scraper import scraper
 import pytz
-#from clock import scheduler, scraper
-from time import sleep
 from threading import Thread
 
 ################
@@ -36,11 +34,11 @@ home_blueprint = Blueprint(
 
 ET_URL = 'https://app.rockgympro.com/b/widget/?'
 
-headers_g = {'User-Agent': 'Mozilla/5.0',
+HEADERS_G = {'User-Agent': 'Mozilla/5.0',
            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
            'X-Requested-With': 'XMLHttpRequest' }
 
-loc_guids = {
+LOC_GUIDS = {
         'cb':['Columbia', '7adb2741626a47a58f11ee624dc48397'],
         'cc':['Crystal City', '2923df3b2bfd4c3bb16b14795c569270'],
         'hd':['Hampden', '503c88b01d36493790767d49703a01c0'],
@@ -49,14 +47,21 @@ loc_guids = {
 
 tz = pytz.timezone('America/New_York')
 now = datetime.now(tz)
-today = date(now.year, now.month, now.day)
+TODAY = date(now.year, now.month, now.day)
 
-# use decorators to link the function to a url
 @home_blueprint.route('/', methods=["GET", "POST"])
 @login_required
 def home():
     error = None
+    user = current_user
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
+    status = sched.reminder
+    if status == 'waiting':
+        return redirect(url_for('home.scrape'))
+    
     form = LocationForm(request.form)
+
     if form.validate_on_submit():
         look_for = form.day.data
         loc = form.location.data
@@ -64,27 +69,27 @@ def home():
             error = "Hampden is closed on the weekends. Please pick a new date."
             return render_template('index.html', form=form, error=error)
         
-        time_delta = look_for - today
+        time_delta = look_for - TODAY
         time_delta = time_delta.days
         if time_delta < 0:
-            error = "Invalid date. Please make sure you picked today or a \
-                later date."
+            error = ("Invalid date. Please make sure you picked today or a "
+                "later date.")
             return render_template('index.html', form=form, error=error)
         #GET request to earth treks to get the locations times
         params_g = {'a':'offering',
-              'offering_guid':loc_guids[loc],
+              'offering_guid':LOC_GUIDS[loc],
               'random':'60536721b6263',
               'iframeid':'',
               'mode':'p'
             }
         sess = requests.Session()
-        res_get = sess.get(ET_URL, headers=headers_g, params=params_g)
+        res_get = sess.get(ET_URL, headers=HEADERS_G, params=params_g)
         get_soup = BeautifulSoup(res_get.content, features='lxml')
         script = get_soup.find_all('script')
         var_dates = script[-1].contents[0]
         if str(look_for) not in var_dates:
-            error = "Sorry! Looks like this date doesn't have any available \
-                time slots left. Please try another date."
+            error = ("Sorry! Looks like this date doesn't have any available "
+                "time slots left. Please try another date.")
             return render_template('index.html', form=form, error=error)
         
         times = re.findall('"%s.*?}' %look_for, var_dates)[0]
@@ -92,7 +97,7 @@ def home():
         times = [i[11:] for i in times_dict['specific_datetimes']]
         #Update the current schedule session
         sched = Schedule.query.order_by(Schedule.id.desc()).first()
-        sched.location = loc_guids[form.location.data][0]
+        sched.location = LOC_GUIDS[form.location.data][0]
         sched.date_look_num = time_delta
         sched.date_look = look_for
         sched.all_times = times
@@ -126,19 +131,7 @@ def schedule():
             "Scheduler is now looking for spots on {0} at {1} at the {2} " +
             "location.").format(date, slot, location)
             )
-        
-        #while
-        # job = scheduler.add_job(
-        #     func=scraper, 
-        #     trigger='interval',
-        #     minutes=1,
-        #     id='scraper',
-        #     name='scraper',
-        #     replace_existing=True 
-        # )
-        # jobs = scheduler.get_jobs()
-        # jobs = str(jobs)
-        # job.modify(next_run_time=datetime.now())
+
         return redirect(url_for('home.scrape'))
     else:
         return render_template('schedule.html', form=form, error=error)
@@ -147,23 +140,11 @@ def schedule():
 @login_required
 def scrape():
     error = None
-    #sched = Schedule.query.order_by(Schedule.id.desc()).first()
     run_func()
-    # reminder = sched.reminder
-    # while reminder == 'waiting':
-    #     result = scraper()
-    #     if result == 'sent':
-    #         sched.reminder = 'sent'
-    #         db.session.commit()
-    #     elif result == 'stop':
-    #         sched.reminder = 'stop'
-    #         db.session.commit()
-    #     sleep(60)
-    #     reminder = result
     return render_template('scraper.html', error=error)
 
 def run_func():
-    thr = Thread(target=run_async_func, args=[app])
+    thr = Thread(target=run_async_func, args=[app], daemon=True)
     thr.start()
     return thr
 
@@ -171,3 +152,12 @@ def run_async_func(app):
     with app.app_context():
         result = scraper()
         return result
+
+@home_blueprint.route('/cancel')
+@login_required
+def cancel():
+    error = None
+    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    sched.reminder = 'cancel'
+    db.session.commit()
+    return render_template('cancel.html', error=error)

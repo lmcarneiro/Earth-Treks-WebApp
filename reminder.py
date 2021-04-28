@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 18 15:47:35 2021
-
-@author: lucas
-"""
 
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import poplib
-from email import parser
 
 
-def reminder(receiver_email, message):
+def reminder_no(receiver_email, message):
 
     smtp_server = "smtp.gmail.com"
     port = 587  # For starttls
@@ -40,7 +33,7 @@ def reminder(receiver_email, message):
     finally:
         server.quit()
         
-def reminder2(receiver_emails, slots):
+def reminder(receiver_emails, param):
     
     for receiver_email in receiver_emails:
     
@@ -51,36 +44,64 @@ def reminder2(receiver_emails, slots):
         message["Subject"] = "Your Sign-Up Reminder"
         message["From"] = sender_email
         message["To"] = receiver_email
-        if type(slots) == str:
+        
+        if param['slots'] == 1:
             # Create the plain-text and HTML version of your message
-            text = ('There is 1 spot available on {}.'
-                    '\nIf you did not sign-up would you like to keep looking? Yes.'
-                    '\n\nThis message was sent from Python.').format(slots)
+            text = (
+                'There is 1 spot available at {0} on {1}.\n'
+                'If you did not sign-up, would you like to keep looking? Yes.'
+                '\n\nThis message was sent from Python.').format(param['loc'],
+                                                                 param['time']
+                                                                 )
             html = ("""\
             <html>
               <body>
-                <p>There is 1 spot available on {}
-                   \nIf you did not sign-up, would you like to keep looking? 
-                   <b><a href="mailto:earthtreksreminders@gmail.com">Yes.</a><br></b>
-                </p>
+                <p>There is 1 spot available at {0} on {1}.</p>
+                <p>If you did not sign-up, would you like to keep looking?</p>
+                   <b><a href="https://earth-treks.herokuapp.com">Yes</a><br>
+                   </b>
               </body>
             </html>
-            """).format(slots)
-        else:
+            """).format(param['loc'], param['time'])
+        elif param['slots'] > 1:
             # Create the plain-text and HTML version of your message
-            text = ('There are {0} spots available on {1}.'
-                    '\nIf you did not sign-up would you like to keep looking? Yes.'
-                    '\n\nThis message was sent from Python.').format(slots[0], slots[1])
+            text = ('There are {0} spots available at {1} on {2}.\nIf '
+                    'you did not sign-up would you like to keep looking? Yes.'
+                    '\n\nThis message was sent from Python.').format(
+                                                                param['slots'], 
+                                                                param['loc'],
+                                                                param['time'])
             html = ("""\
             <html>
               <body>
-                <p>There are {0} spots available on {1}.
-                   \nIf you did not sign-up, would you like to keep looking? 
-                   <b><a href="mailto:earthtreksreminders@gmail.com">Yes.</a><br></b>
-                </p>
+                <p>There are {0} spots available at {1} on {2}.</p>
+                <p>If you did not sign-up, would you like to keep looking?</p>
+                   <b><a href="https://earth-treks.herokuapp.com">Yes</a><br>
+                   </b>
               </body>
             </html>
-            """).format(slots[0], slots[1])
+            """).format(param['slots'], param['loc'], param['time'])
+            
+        elif param['slots'] == 0:
+            # Create the plain-text and HTML version of your message
+            text = ('Sorry! It looks like no spots opened up for you at {0} on'
+                    '{1}.\n'
+                    'If you would like to try a new date please click here.'
+                    '\n\nThis message was sent from Python.').format(                                                                
+                                                                param['loc'],
+                                                                param['time'])
+            html = ("""\
+            <html>
+              <body>
+                <p>Sorry! It looks like no spots opened up for you at {0} on
+                {1}.
+                </p>
+                <p>If you would like to try a new date please click?</p>
+                   <b><a href="https://earth-treks.herokuapp.com">here</a><br>
+                   </b>
+              </body>
+            </html>
+            """).format(param['loc'], param['time'])
         
         # Turn these into plain/html MIMEText objects
         part1 = MIMEText(text, "plain")
@@ -98,19 +119,3 @@ def reminder2(receiver_emails, slots):
             server.sendmail(
                 sender_email, receiver_email, message.as_string()
             )
-def check_response():
-    pop_conn = poplib.POP3_SSL('pop.gmail.com')
-    pop_conn.user('earthtreksreminders@gmail.com')
-    pop_conn.pass_('Barefoot3*')
-    #Get messages from server:
-    resp, lines, octets = pop_conn.retr(1)
-    msg_cont = b'\r\n'.join(lines).decode('utf-8')
-    msg = parser.Parser().parsestr(msg_cont)
-    sender = msg.get('From')
-    print(sender)
-    pop_conn.quit()
-    
-    if sender in ['lmcarneiro@smcm.edu', 'Ev.cebotari@gmail.com']:
-        return 'Continue'
-    else:
-        return 'Quit'

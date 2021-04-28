@@ -41,19 +41,27 @@ def login():
                     user.password, request.form['password']):
                 login_user(user)
                 today_date = str(date.today())
-                user_sched = Schedule(name_id=user.id,
-                                      today=today_date,
-                                      location=None,
-                                      all_times=None,
-                                      date_look=None,
-                                      time_slot=None,
-                                      date_look_num=None,
-                                      time_slot_num=None,
-                                      reminder=None)
-                db.session.add(user_sched)
-                db.session.commit()
-                flash('You were logged in.')
-                return redirect(url_for('home.home'))
+                user_scheds = Schedule.query.filter_by(name_id=user.id)
+                sched = user_scheds.order_by(Schedule.id.desc()).first()
+                if sched is not None:    
+                    status = sched.reminder
+                    if status == 'waiting':
+                        flash('You were logged in.')
+                        return redirect(url_for('home.scrape'))
+                else:
+                    user_sched = Schedule(name_id=user.id,
+                                          today=today_date,
+                                          location=None,
+                                          all_times=None,
+                                          date_look=None,
+                                          time_slot=None,
+                                          date_look_num=None,
+                                          time_slot_num=None,
+                                          reminder=None)
+                    db.session.add(user_sched)
+                    db.session.commit()
+                    flash('You were logged in.')
+                    return redirect(url_for('home.home'))
             else:
                 error = 'Invalid username or password.'
     return render_template('login.html', form=form, error=error)

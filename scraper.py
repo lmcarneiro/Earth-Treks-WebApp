@@ -6,10 +6,28 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from reminder import reminder
-from project import db#, scheduler
+from project import db
 from project.models import Schedule, User
 import pytz
 from time import sleep
+
+
+ET_URL = 'https://app.rockgympro.com/b/widget/?'
+
+
+HEADERS = {
+    'User-Agent':'Mozilla/5.0',
+    'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',
+    'X-Requested-With': 'XMLHttpRequest' }
+
+GUIDS = {
+        'Columbia':'7adb2741626a47a58f11ee624dc48397',
+        'Crystal City':'2923df3b2bfd4c3bb16b14795c569270',
+        'Hampden':'503c88b01d36493790767d49703a01c0',
+        'Rockville':'07d503eb2ba04792a095a56cb5fe1c8e',
+        'Timodium':'65529b9f9ddb4282924cf2a782c436d9'}
+
+PARAMS = {'a':'equery'}
 
 
 def scraper():
@@ -19,11 +37,8 @@ def scraper():
     today = date(now.year, now.month, now.day)
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
     result = sched.reminder
-    while result == 'waiting':
-        # jobs = scheduler.get_jobs()
-        # jobs = str(jobs)
-        # sched.test = jobs
-        # db.session.commit()
+    remind = sched.reminder
+    while result == 'waiting' or remind != 'cancel':
         users = User.query.order_by(User.id)
         receiver = users.filter_by(id=sched.name_id)[0].email
         started_on = sched.today
@@ -32,36 +47,25 @@ def scraper():
         time_slot = sched.time_slot_num
         date_diff = date.fromisoformat(look_for) - today
         date_diff = date_diff.days
-        
-        ET_URL = 'https://app.rockgympro.com/b/widget/?'
-        
-    
-        headers_p = {'User-Agent': 'Mozilla/5.0',
-                   'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                   'X-Requested-With': 'XMLHttpRequest' }
-        
-        loc_guids = {
-                'Columbia':'7adb2741626a47a58f11ee624dc48397',
-                'Crystal City':'2923df3b2bfd4c3bb16b14795c569270',
-                'Hampden':'503c88b01d36493790767d49703a01c0',
-                'Rockville':'07d503eb2ba04792a095a56cb5fe1c8e',
-                'Timodium':'65529b9f9ddb4282924cf2a782c436d9'}
-        
-        params_p = {'a':'equery'}
-        
+        remind = sched.reminder
+        if remind == 'cancel':
+            return remind
+        if result != 'waiting':
+            return result
         
         session = requests.Session()
-        data = {
+        
+        DATA = {
         	"PreventChromeAutocomplete": "",
         	"random": "60537a225b5d3",
         	"iframeid": "",
         	"mode": "p",
         	"fctrl_1": "offering_guid",
-        	"offering_guid": loc_guids[loc],
+        	"offering_guid": GUIDS[loc],
         	"fctrl_2": "course_guid",
         	"course_guid": "",
-        	"fctrl_3": "limited_to_course_guid_for_offering_guid_%s" %loc_guids[loc],
-        	"limited_to_course_guid_for_offering_guid_%s" %loc_guids[loc]: "",
+        	"fctrl_3": "limited_to_course_guid_for_offering_guid_%s" %GUIDS[loc],
+        	"limited_to_course_guid_for_offering_guid_%s" %GUIDS[loc]: "",
         	"fctrl_4": "show_date",
         	"show_date": look_for,
         	"ftagname_0_pcount-pid-1-316074": "pcount",
@@ -101,14 +105,21 @@ def scraper():
         	"fctrl_10": "pcount-pid-1-6570974",
         	"pcount-pid-1-6570974": "0"
         }
-    
-        res_pos = session.post(ET_URL, headers=headers_p, params=params_p, data=data)
+
+        
+        res_pos = session.post(ET_URL, 
+                               headers=HEADERS,
+                               params=PARAMS, 
+                               data=DATA)
         
         available_json = res_pos.json()
-        available_soup = BeautifulSoup(available_json['event_list_html'], features='lxml')
+        available_soup = BeautifulSoup(available_json['event_list_html'],
+                                       features='lxml'
+                                       )
         times = available_soup.find_all('td',
                                         attrs={
-                                            'class':'offering-page-schedule-list-time-column'
+                                            'class':'offering-page-schedule-'
+                                            'list-time-column'
                                             }
                                         )
         times = [time.text.strip('\n') for time in times]
@@ -116,49 +127,62 @@ def scraper():
         slots = [slot.strip('\n') for slot in slots]
         time_slots = dict(zip(times, slots))
         
-        
         slot_v = []
         if len(time_slots.keys()) > 0:
             slot_t = list(time_slots.keys())[time_slot]
         if len(time_slots.values()) > 0:
-            slot_v = list(time_slots.values())[time_slot]
-            
+            slot_v = list(time_slots.values())[time_slot] 
+        
         
         if 'space' in slot_v:
             num_slots = int(slot_v.split(' space')[0])
             slot_t = slot_t.replace('to  ', 'to ')
             if num_slots == 1:
-                message = ('Subject: Your Sign-Up Reminder\n\nThere is 1 spot available'
-                           ' on {}.'
-                           '\n\nThis message was sent from Python.').format(slot_t)
+                message = (
+                    'Subject: Your Sign-Up Reminder\n\nThere is 1 spot '
+                    'available at {0} on {1}.'
+                    '\n\nThis message was sent from Python.').format(loc,
+                                                                     slot_t)
             elif num_slots > 1:
-                message = ('Subject: Your Sign-Up Reminder\n\nThere are {0} spots'
-                          ' available on {1}.'
-                          '\n\nThis message was sent from Python.').format(num_slots, slot_t)
+                message = (
+                    'Subject: Your Sign-Up Reminder\n\nThere are {0} spots '
+                    'available at {1} on {2}.'
+                    '\n\nThis message was sent from Python.').format(num_slots,
+                                                                     loc,
+                                                                     slot_t)
             if message != {}:
                 print(message)
-    
-            reminder([receiver], message)
+                
+            params = {'loc':loc,
+                      'slots':num_slots,
+                      'time':slot_t}
+            
+            reminder([receiver], params)
             result = 'sent'
             sched.reminder = 'sent'
             db.session.commit()
-            #scheduler.remove_job(id='scraper')
             
         else:
-            print('This job was started on %s. Today is %s.' %(started_on, str(today)))
+            print('This job was started on %s. Today is %s.' %(started_on, 
+                                                               str(today)
+                                                               )
+                  )
             if date_diff < 0:
-                #scheduler.remove_job(id='scraper')
-                message = ('Subject: Your Sign-Up Reminder\n\n'
-                           'Sorry! It looks like no spots opened up for you.\nIf you'
-                           'would like to try a new date please click here.')
                 print('No spots opened up for you, crontab will stop looking.')
-                result = 'stop'
+                params = {'loc':loc,
+                          'slots':0,
+                          'time':slot_t}
+                reminder([receiver], params)
+                result = 'stopped'
                 sched.reminder = 'stopped'
                 db.session.commit()
             else:
-                print('Crontab is running this script every minute until a spot opens up.')
+                print('Crontab is running this script every minute until a '
+                      'spot opens up.')
                 result = 'waiting'
                 sched.reminder = 'waiting'
                 db.session.commit()
-        sleep(2)
+        
+        sleep(30)
+        
     return result
