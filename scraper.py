@@ -80,7 +80,7 @@ def kaffeine_req(on):
                                 cookies=kaf_cookies
                                 )
 
-    return kaf_pos.status_code
+    return kaf_pos
 
 def scraper():
 
@@ -91,9 +91,10 @@ def scraper():
     result = sched.reminder
     remind = sched.reminder
     
-    kaf_status = kaffeine_req(on=True)
+    kaf_pos = kaffeine_req(on=True)
     
-    print(kaf_status)
+    print('Kaffeine turned on status: %d' %kaf_pos.status_code)
+    print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
     
     while result == 'waiting' or remind != 'cancel':
         users = User.query.order_by(User.id)
@@ -234,8 +235,9 @@ def scraper():
             result = 'sent'
             sched.reminder = 'sent'
             db.session.commit()
-            kaf_status = kaffeine_req(on=False)
-            print(kaf_status)
+            kaf_pos = kaffeine_req(on=False)
+            print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+            print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
             return result
         else:
             print('This job was started on %s. Today is %s.' %(started_on, 
@@ -252,8 +254,9 @@ def scraper():
                 result = 'stopped'
                 sched.reminder = 'stopped'
                 db.session.commit()
-                kaf_status = kaffeine_req(on=False)
-                print(kaf_status)
+                kaf_pos = kaffeine_req(on=False)
+                print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+                print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
                 return result
             else:
                 print('Crontab is running this script every minute until a '
