@@ -29,6 +29,58 @@ GUIDS = {
 
 PARAMS = {'a':'equery'}
 
+def kaffeine_req(on):
+    
+    kaf_sess = requests.Session()
+    kaf_get = kaf_sess.get('https://kaffeine.herokuapp.com/')
+    kaf_soup = BeautifulSoup(kaf_get.text, 'lxml')
+    csrf = kaf_soup.select_one('meta[name="csrf-token"]')['content']
+    
+    kaf_cookies = requests.utils.cookiejar_from_dict(
+        requests.utils.dict_from_cookiejar(kaf_sess.cookies)
+        )
+    
+    kaf_header = {
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Content-Length': '41',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'DNT': '1',
+        'Host': 'kaffeine.herokuapp.com',
+        'Origin': 'https://kaffeine.herokuapp.com',
+        'Pragma': 'no-cache',
+        'Referer': 'https://kaffeine.herokuapp.com/',
+        'User-Agent': ('Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:87.0)'
+                       'Gecko/20100101 Firefox/87.0'),
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': csrf}
+    
+    if on is True:
+
+        kaf_pos = kaf_sess.post('https://kaffeine.herokuapp.com/register',
+                                data={'name':'earth-treks',
+                                      'nap':'true', 
+                                      'bedtime':'23:00'
+                                      },
+                                headers=kaf_header,
+                                cookies=kaf_cookies
+                                )
+        
+    
+    if on is False:
+        
+        kaf_pos = kaf_sess.post('https://kaffeine.herokuapp.com/decaf',
+                                data={'name':'earth-treks',
+                                      '_method':'delete'
+                                      },
+                                headers=kaf_header,
+                                cookies=kaf_cookies
+                                )
+
+    return kaf_pos.status_code
 
 def scraper():
 
@@ -38,13 +90,18 @@ def scraper():
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
     result = sched.reminder
     remind = sched.reminder
+    
+    kaf_status = kaffeine_req(on=True)
+    
+    print(kaf_status)
+    
     while result == 'waiting' or remind != 'cancel':
         users = User.query.order_by(User.id)
         receiver = users.filter_by(id=sched.name_id)[0].email
         started_on = sched.today
         look_for = sched.date_look
         loc = sched.location
-        time_slot = sched.time_slot_num
+        time_slot = sched.time_slot
         date_diff = date.fromisoformat(look_for) - today
         date_diff = date_diff.days
         remind = sched.reminder
@@ -128,12 +185,28 @@ def scraper():
         time_slots = dict(zip(times, slots))
         
         slot_v = []
-        if len(time_slots.keys()) > 0:
-            slot_t = list(time_slots.keys())[time_slot]
-        if len(time_slots.values()) > 0:
-            slot_v = list(time_slots.values())[time_slot] 
-        
-        
+        try:
+            hour = int(time_slot[:2])
+            mins = time_slot[3:5]
+            if hour > 12:
+                hour -= 12
+                if mins != '00':
+                    time_slot = '%d:%s PM' %(hour, mins)
+                else:
+                    time_slot = '%d PM' %hour
+            else:
+                if time_slot[3:5] != '00':
+                    time_slot = '%d:%s AM' %(hour, mins)
+                else:
+                    time_slot = '%d AM' %hour
+            for _ in time_slots.keys():
+                if time_slot in _:
+                    slot_t = _
+            for _ in time_slots.values():
+                slot_v = time_slots[slot_t]
+        except:
+            times = None
+            pass
         if 'space' in slot_v:
             num_slots = int(slot_v.split(' space')[0])
             slot_t = slot_t.replace('to  ', 'to ')
@@ -161,13 +234,16 @@ def scraper():
             result = 'sent'
             sched.reminder = 'sent'
             db.session.commit()
-            
+            kaf_status = kaffeine_req(on=False)
+            print(kaf_status)
+            return result
         else:
             print('This job was started on %s. Today is %s.' %(started_on, 
                                                                str(today)
                                                                )
                   )
-            if date_diff < 0:
+            if date_diff < 0 or times is None:
+                slot_t = time_slot
                 print('No spots opened up for you, crontab will stop looking.')
                 params = {'loc':loc,
                           'slots':0,
@@ -176,12 +252,17 @@ def scraper():
                 result = 'stopped'
                 sched.reminder = 'stopped'
                 db.session.commit()
+                kaf_status = kaffeine_req(on=False)
+                print(kaf_status)
+                return result
             else:
                 print('Crontab is running this script every minute until a '
                       'spot opens up.')
                 result = 'waiting'
                 sched.reminder = 'waiting'
                 db.session.commit()
+                return result
+        
         
         sleep(30)
         

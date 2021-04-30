@@ -20,7 +20,10 @@
         </span>
     </p>
     <button class="btn btn-sm btn-success" type="submit">Submit</button>
+    <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-success">Cancel</a>
 <form>
-<p>Click here to <a href="/logout">logout.</a></p>
+<br>
+<br>
+<p>Click here to <a href="/logout" class="btn btn-sm btn-primary">Logout</a></p>
 
 {% endblock %}

@@ -49,17 +49,20 @@ tz = pytz.timezone('America/New_York')
 now = datetime.now(tz)
 TODAY = date(now.year, now.month, now.day)
 
+def run_check():
+    user = current_user
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
+    if sched is not None:
+        status = sched.reminder
+        if status == 'waiting':
+            return redirect(url_for('home.scrape'))
+
 @home_blueprint.route('/', methods=["GET", "POST"])
 @login_required
 def home():
     error = None
-    user = current_user
-    user_scheds = Schedule.query.filter_by(name_id=user.id)
-    sched = user_scheds.order_by(Schedule.id.desc()).first()
-    status = sched.reminder
-    if status == 'waiting':
-        return redirect(url_for('home.scrape'))
-    
+    run_check()
     form = LocationForm(request.form)
 
     if form.validate_on_submit():
@@ -84,6 +87,15 @@ def home():
             }
         sess = requests.Session()
         res_get = sess.get(ET_URL, headers=HEADERS_G, params=params_g)
+        if res_get.status_code == 200:
+            pass
+        else:
+            error = (
+                'Looks like something went wrong with Earth Treks.'
+                'Please check their website.'
+                "If Earth Treks looks ok, it's our bad. Please contact admin."
+                )
+            return render_template('index.html', form=form, error=error)
         get_soup = BeautifulSoup(res_get.content, features='lxml')
         script = get_soup.find_all('script')
         var_dates = script[-1].contents[0]
@@ -91,8 +103,8 @@ def home():
             error = ("Sorry! Looks like this date doesn't have any available "
                 "time slots left. Please try another date.")
             return render_template('index.html', form=form, error=error)
-        
-        times = re.findall('"%s.*?}' %look_for, var_dates)[0]
+        else:
+            times = re.findall('"%s.*?}' %look_for, var_dates)[0]
         times_dict = json.loads(times[13:])
         times = [i[11:] for i in times_dict['specific_datetimes']]
         #Update the current schedule session
@@ -110,38 +122,52 @@ def home():
 @login_required
 def schedule():
     error = None
+    run_check()
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
     times = sched.all_times
     form = ScheduleForm(request.form)
     form.time_slot.choices = []
+    if times is None:
+        return redirect(url_for('home.home'))
     for i, time in enumerate(times):
         form.time_slot.choices += [(i, time)]
     
     if form.validate_on_submit():
         sched = Schedule.query.order_by(Schedule.id.desc()).first()
         sched.time_slot_num = form.time_slot.data
-        date = sched.date_look
         slot = sched.all_times[int(form.time_slot.data)]
         sched.time_slot = slot
         sched.reminder = 'waiting'
-        location = sched.location
         db.session.commit()
-        flash((
-            "Thanks! " +
-            "Scheduler is now looking for spots on {0} at {1} at the {2} " +
-            "location.").format(date, slot, location)
-            )
 
         return redirect(url_for('home.scrape'))
     else:
         return render_template('schedule.html', form=form, error=error)
     
-@home_blueprint.route('/scraper')
+@home_blueprint.route('/running')
 @login_required
 def scrape():
     error = None
+    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    if sched.reminder != 'waiting':
+        return redirect(url_for('home.home'))
+    date = datetime.fromisoformat(sched.date_look)
+    date = date.strftime('%m/%d/%y')
+    time = sched.time_slot
+    hour = int(time[:2])
+    if hour > 12:
+        hour -= 12
+        time = '%d:%s PM' %(hour, time[3:5])
+    else:
+        time = '%d:%s AM' %(hour, time[3:5])
+    data = {'loc':sched.location,
+            'date':date,
+            'time':time}
+    if data['loc'] is None:
+        error = 'Something went wrong. Try logging out and starting a new job.'
+        return render_template('running.html', data=data, error=error)
     run_func()
-    return render_template('scraper.html', error=error)
+    return render_template('running.html', data=data, error=error)
 
 def run_func():
     thr = Thread(target=run_async_func, args=[app], daemon=True)

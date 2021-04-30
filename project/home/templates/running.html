@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Earth Treks Reminders</h1>
+<br>
+
+<h3>Scheduler is Running...</h3>
+<p>Thanks! Scheduler is now looking for spots at the {{ data.loc }} location 
+on {{ data.date }} at {{ data.time }}.
+</p>
+<p>You will receive an email letting you know if a spot opens up.</p>
+<p>Scheduler will stop running if no spots open up. You will receive an email
+letting you know if this is the case.</p>
+<p>Click here to <a href="/cancel" class="btn btn-sm btn-danger">Cancel</a></p>
+<p>Click here to <a href="/logout" class="btn btn-sm btn-primary">Logout</a></p>
+
+{% endblock %}

@@ -43,11 +43,9 @@ def login():
                 today_date = str(date.today())
                 user_scheds = Schedule.query.filter_by(name_id=user.id)
                 sched = user_scheds.order_by(Schedule.id.desc()).first()
-                if sched is not None:    
-                    status = sched.reminder
-                    if status == 'waiting':
-                        flash('You were logged in.')
-                        return redirect(url_for('home.scrape'))
+                if sched is not None and sched.reminder == 'waiting':
+                    flash('You were logged in.')
+                    return redirect(url_for('home.scrape'))
                 else:
                     user_sched = Schedule(name_id=user.id,
                                           today=today_date,
