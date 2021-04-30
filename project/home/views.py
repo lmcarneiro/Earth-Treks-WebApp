@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-from scraper import scraper
+from scraper import scraper, kaffeine_req
 import pytz
 from threading import Thread
 
@@ -185,5 +185,8 @@ def cancel():
     error = None
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
     sched.reminder = 'cancel'
+    kaf_pos = kaffeine_req(on=False)
+    print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+    print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
     db.session.commit()
     return render_template('cancel.html', error=error)
