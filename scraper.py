@@ -263,9 +263,7 @@ def scraper():
                       'spot opens up.')
                 result = 'waiting'
                 sched.reminder = 'waiting'
-                db.session.commit()
-                return result
-        
+                db.session.commit()        
         
         sleep(30)
         
