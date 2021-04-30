@@ -184,9 +184,16 @@ def run_async_func(app):
 def cancel():
     error = None
     sched = Schedule.query.order_by(Schedule.id.desc()).first()
-    sched.reminder = 'cancel'
-    kaf_pos = kaffeine_req(on=False)
-    print('Kaffeine turned off status: %d' %kaf_pos.status_code)
-    print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
-    db.session.commit()
+    status = sched.reminder
+    if status == 'waiting':
+        sched.reminder = 'cancel'
+        kaf_pos = kaffeine_req(on=False)
+        print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+        print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
+        db.session.commit()
+    else:
+        flash('You tried to cancel an already completed job.'
+              'No jobs currently running.')
+        return redirect(url_for('home.home'))
+        
     return render_template('cancel.html', error=error)
