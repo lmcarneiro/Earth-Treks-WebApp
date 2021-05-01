@@ -55,7 +55,9 @@ def run_check():
     sched = user_scheds.order_by(Schedule.id.desc()).first()
     if sched is not None:
         status = sched.reminder
+        flash(status)
         if status == 'waiting':
+            flash('redirected')
             return redirect(url_for('home.scrape'))
 
 @home_blueprint.route('/', methods=["GET", "POST"])
@@ -123,7 +125,9 @@ def home():
 def schedule():
     error = None
     run_check()
-    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    user = current_user
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
     times = sched.all_times
     form = ScheduleForm(request.form)
     form.time_slot.choices = []
@@ -148,7 +152,9 @@ def schedule():
 @login_required
 def scrape():
     error = None
-    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    user = current_user
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
     if sched.reminder != 'waiting':
         return redirect(url_for('home.home'))
     date = datetime.fromisoformat(sched.date_look)
@@ -183,7 +189,9 @@ def run_async_func(app):
 @login_required
 def cancel():
     error = None
-    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    user = current_user
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
     status = sched.reminder
     if status == 'waiting':
         sched.reminder = 'cancel'
@@ -192,7 +200,7 @@ def cancel():
         print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
         db.session.commit()
     else:
-        flash('You tried to cancel an already completed job.'
+        flash('You tried to cancel an already completed job. '
               'No jobs currently running.')
         return redirect(url_for('home.home'))
         

@@ -43,8 +43,10 @@ def login():
                 today_date = str(date.today())
                 user_scheds = Schedule.query.filter_by(name_id=user.id)
                 sched = user_scheds.order_by(Schedule.id.desc()).first()
+                
                 if sched is not None and sched.reminder == 'waiting':
                     flash('You were logged in.')
+                    flash(sched.name_id)
                     return redirect(url_for('home.scrape'))
                 else:
                     user_sched = Schedule(name_id=user.id,
@@ -58,6 +60,7 @@ def login():
                                           reminder=None)
                     db.session.add(user_sched)
                     db.session.commit()
+                    flash(sched.name_id)
                     flash('You were logged in.')
                     return redirect(url_for('home.home'))
             else:
