@@ -2,3 +2,4 @@ venv
 *.pyc
 *.db
 coverage
+db_create_users.py
