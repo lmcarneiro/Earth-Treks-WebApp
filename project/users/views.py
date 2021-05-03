@@ -46,7 +46,6 @@ def login():
                 
                 if sched is not None and sched.reminder == 'waiting':
                     flash('You were logged in.')
-                    flash(sched.name_id)
                     return redirect(url_for('home.scrape'))
                 else:
                     user_sched = Schedule(name_id=user.id,

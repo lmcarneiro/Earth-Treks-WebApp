@@ -10,6 +10,7 @@ from project import db
 from project.models import Schedule, User
 import pytz
 from time import sleep
+from flask_login import current_user
 
 
 ET_URL = 'https://app.rockgympro.com/b/widget/?'
@@ -87,18 +88,18 @@ def scraper():
     tz = pytz.timezone('America/New_York')
     now = datetime.now(tz)
     today = date(now.year, now.month, now.day)
-    sched = Schedule.query.order_by(Schedule.id.desc()).first()
+    user = current_user    
+    user_scheds = Schedule.query.filter_by(name_id=user.id)
+    sched = user_scheds.order_by(Schedule.id.desc()).first()
     result = sched.reminder
     remind = sched.reminder
-    
+    receiver = sched.email
     kaf_pos = kaffeine_req(on=True)
     
     print('Kaffeine turned on status: %d' %kaf_pos.status_code)
     print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
     
     while result == 'waiting' or remind != 'cancel':
-        users = User.query.order_by(User.id)
-        receiver = users.filter_by(id=sched.name_id)[0].email
         started_on = sched.today
         look_for = sched.date_look
         loc = sched.location
