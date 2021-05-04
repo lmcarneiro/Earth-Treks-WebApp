@@ -83,23 +83,22 @@ def kaffeine_req(on):
 
     return kaf_pos
 
-def scraper():
+def scraper(user_id):
 
     tz = pytz.timezone('America/New_York')
     now = datetime.now(tz)
     today = date(now.year, now.month, now.day)
-    user = current_user    
-    user_scheds = Schedule.query.filter_by(name_id=user.id)
-    sched = user_scheds.order_by(Schedule.id.desc()).first()
-    result = sched.reminder
-    remind = sched.reminder
-    receiver = sched.email
-    kaf_pos = kaffeine_req(on=True)
-    
-    print('Kaffeine turned on status: %d' %kaf_pos.status_code)
-    print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
-    
-    while result == 'waiting' or remind != 'cancel':
+    user = User.query.filter_by(id=user_id).first()
+    user_scheds = Schedule.query.filter_by(name_id=user_id)
+    sched_0 = user_scheds.order_by(Schedule.id.desc()).first()
+    remind = sched_0.reminder
+    receiver = user.email
+    # kaf_pos = kaffeine_req(on=True)
+    # print('Kaffeine turned on status: %d' %kaf_pos.status_code)
+    # print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
+    while remind == 'waiting':
+        user_scheds = Schedule.query.filter_by(name_id=user.id)
+        sched = user_scheds.order_by(Schedule.id.desc()).first()
         started_on = sched.today
         look_for = sched.date_look
         loc = sched.location
@@ -109,8 +108,6 @@ def scraper():
         remind = sched.reminder
         if remind == 'cancel':
             return remind
-        if result != 'waiting':
-            return result
         
         session = requests.Session()
         
@@ -233,13 +230,13 @@ def scraper():
                       'time':slot_t}
             
             reminder([receiver], params)
-            result = 'sent'
+            remind = 'sent'
             sched.reminder = 'sent'
             db.session.commit()
             kaf_pos = kaffeine_req(on=False)
             print('Kaffeine turned off status: %d' %kaf_pos.status_code)
             print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
-            return result
+            return remind
         else:
             print('This job was started on %s. Today is %s.' %(started_on, 
                                                                str(today)
@@ -252,20 +249,23 @@ def scraper():
                           'slots':0,
                           'time':slot_t}
                 reminder([receiver], params)
-                result = 'stopped'
+                remind = 'stopped'
                 sched.reminder = 'stopped'
                 db.session.commit()
                 kaf_pos = kaffeine_req(on=False)
                 print('Kaffeine turned off status: %d' %kaf_pos.status_code)
                 print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
-                return result
+                return remind
             else:
                 print('Crontab is running this script every minute until a '
                       'spot opens up.')
-                result = 'waiting'
-                sched.reminder = 'waiting'
-                db.session.commit()        
-        
+                user = User.query.filter_by(id=user_id).first()
+                user_scheds = Schedule.query.filter_by(name_id=user_id)
+                sched = user_scheds.order_by(Schedule.id.desc()).first()
+                remind = sched.reminder
+                
+                print('result 3', sched.id, remind)
+        db.session.commit()
         sleep(30)
         
-    return result
+    return remind

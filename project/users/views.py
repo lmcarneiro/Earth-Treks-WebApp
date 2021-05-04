@@ -59,7 +59,6 @@ def login():
                                           reminder=None)
                     db.session.add(user_sched)
                     db.session.commit()
-                    flash(sched.name_id)
                     flash('You were logged in.')
                     return redirect(url_for('home.home'))
             else:

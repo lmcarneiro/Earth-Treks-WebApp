@@ -55,7 +55,6 @@ def run_check():
     sched = user_scheds.order_by(Schedule.id.desc()).first()
     if sched is not None:
         status = sched.reminder
-        flash(status)
         if status == 'waiting':
             flash('redirected')
             return redirect(url_for('home.scrape'))
@@ -141,7 +140,6 @@ def schedule():
         sched.time_slot_num = form.time_slot.data
         slot = sched.all_times[int(form.time_slot.data)]
         sched.time_slot = slot
-        sched.reminder = 'waiting'
         db.session.commit()
 
         return redirect(url_for('home.scrape'))
@@ -155,8 +153,10 @@ def scrape():
     user = current_user
     user_scheds = Schedule.query.filter_by(name_id=user.id)
     sched = user_scheds.order_by(Schedule.id.desc()).first()
-    if sched.reminder != 'waiting':
-        return redirect(url_for('home.home'))
+    print(sched.reminder)
+    #FIX THIS
+    # if sched.reminder is not None and sched.reminder != 'waiting':
+    #     return redirect(url_for('home.home'))
     date = datetime.fromisoformat(sched.date_look)
     date = date.strftime('%m/%d/%y')
     time = sched.time_slot
@@ -172,17 +172,29 @@ def scrape():
     if data['loc'] is None:
         error = 'Something went wrong. Try logging out and starting a new job.'
         return render_template('running.html', data=data, error=error)
-    run_func()
+    if sched.reminder != 'waiting':
+        scheds = Schedule.query.filter_by(reminder='waiting').first()
+        if scheds is None:
+            kaf_pos = kaffeine_req(on=True)
+            print('Kaffeine turned on status: %d' %kaf_pos.status_code)
+            print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
+        sched.reminder = 'waiting'
+        db.session.commit()
+        thr = run_func(user.id)
+        if sched.reminder != 'waiting':
+            thr.join()
+    else:
+        pass
     return render_template('running.html', data=data, error=error)
 
-def run_func():
-    thr = Thread(target=run_async_func, args=[app], daemon=True)
+def run_func(user):
+    thr = Thread(target=run_async_func, args=[app, user], daemon=True)
     thr.start()
     return thr
 
-def run_async_func(app):
+def run_async_func(app, user):
     with app.app_context():
-        result = scraper()
+        result = scraper(user)
         return result
 
 @home_blueprint.route('/cancel')
@@ -195,10 +207,12 @@ def cancel():
     status = sched.reminder
     if status == 'waiting':
         sched.reminder = 'cancel'
-        kaf_pos = kaffeine_req(on=False)
-        print('Kaffeine turned off status: %d' %kaf_pos.status_code)
-        print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
         db.session.commit()
+        scheds = Schedule.query.filter_by(reminder='waiting').first()
+        if scheds is None:
+            kaf_pos = kaffeine_req(on=False)
+            print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+            print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
     else:
         flash('You tried to cancel an already completed job. '
               'No jobs currently running.')
