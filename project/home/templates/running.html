@@ -5,13 +5,23 @@
 <br>
 
 <h3>Scheduler is Running...</h3>
-<p>Thanks! Scheduler is now looking for spots at the {{ data.loc }} location 
-on {{ data.date }} at {{ data.time }}.
+<p>
+    Thanks! Scheduler is currently looking for spots at the 
+    <b>{{ data.loc }}</b> location on <b>{{ data.date }}</b> 
+    at <b>{{ data.time }}</b>.
 </p>
-<p>You will receive an email letting you know if a spot opens up.</p>
+<p>
+    You will receive an email letting you know if a spot opens up.
+</p>
 <p>Scheduler will stop running if no spots open up. You will receive an email
 letting you know if this is the case.</p>
-<p>Click here to <a href="/cancel" class="btn btn-sm btn-danger">Cancel</a></p>
+<p>
+    <form role="form" method="post">
+    Click here to 
+        {{ form.csrf_token }}
+        {{ form.submit(class_="btn btn-sm btn-danger") }}
+    </form>
+</p>
 <p>Click here to <a href="/logout" class="btn btn-sm btn-primary">Logout</a></p>
 
 {% endblock %}

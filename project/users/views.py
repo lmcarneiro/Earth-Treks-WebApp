@@ -5,7 +5,7 @@
 
 from flask import flash, redirect, render_template, request, \
     url_for, Blueprint  # pragma: no cover
-from flask_login import login_user, login_required, logout_user  # pragma: no cover
+from flask_login import login_user, login_required, logout_user, current_user  # pragma: no cover
 from project.users.forms import LoginForm  # pragma: no cover
 from project.models import User, Schedule, bcrypt  # pragma: no cover
 from project import db
@@ -34,6 +34,12 @@ today = date(now.year, now.month, now.day)
 def login():
     error = None
     form = LoginForm(request.form)
+    try:
+        if current_user.is_authenticated() is True:
+            flash("You're already logged in as {}".format(current_user.name.capitalize()))
+            return redirect(url_for('home.home'))
+    except TypeError:
+        pass
     if request.method == 'POST':
         if form.validate_on_submit():
             user = User.query.filter_by(name=request.form['username']).first()

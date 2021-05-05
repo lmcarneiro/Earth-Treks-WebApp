@@ -7,7 +7,7 @@
 <!-- Scheduling form -->
 <h3>Set up your scheduler!</h3>
 
-<form class="form-control" role="form" method="post" action="/schedule">
+<form class="form-message" role="form" method="post" action="/schedule">
     {{ form.csrf_token }}
     <p>
         {{ form.time_slot }}
@@ -20,7 +20,7 @@
         </span>
     </p>
     <button class="btn btn-sm btn-success" type="submit">Submit</button>
-    <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-success">Cancel</a>
+    <a href="{{ url_for('home.home') }}" class="btn btn-sm btn-danger">Cancel</a>
 <form>
 <br>
 <br>

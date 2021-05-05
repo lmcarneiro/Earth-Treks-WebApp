@@ -5,9 +5,9 @@
 
 from project import db, app#, scheduler  # pragma: no cover
 from project.models import Schedule#, Location, User  # pragma: no cover
-from project.home.forms import LocationForm, ScheduleForm  # pragma: no cover
+from project.home.forms import LocationForm, ScheduleForm, CancelForm # pragma: no cover
 from flask import render_template, Blueprint, request,\
-    url_for, flash, redirect  # pragma: no cover
+    url_for, flash, redirect, Markup  # pragma: no cover
 from flask_login import login_required, current_user # pragma: no cover
 from datetime import datetime, date
 import requests
@@ -55,15 +55,37 @@ def run_check():
     sched = user_scheds.order_by(Schedule.id.desc()).first()
     if sched is not None:
         status = sched.reminder
-        if status == 'waiting':
-            flash('redirected')
-            return redirect(url_for('home.scrape'))
+    else:
+        status = None
+    return status
 
 @home_blueprint.route('/', methods=["GET", "POST"])
 @login_required
 def home():
     error = None
-    run_check()
+    status = run_check()
+    user = current_user
+    if status == 'waiting':
+        warn = Markup('<b>Warning!</b> ')
+        flash(warn)
+        flash('Scheduler is currently running the above job. '
+              'If you would like to start a new job, '
+              'please cancel this one first.')
+        return redirect(url_for('home.scrape'))
+    elif status == 'sent' or status == 'cancel':
+        sched = Schedule(
+                    name_id=user.id,
+                    today=TODAY,
+                    location=None,
+                    all_times=None,
+                    date_look=None,
+                    time_slot=None,
+                    date_look_num=None,
+                    time_slot_num=None,
+                    reminder=None
+                    )
+        db.session.add(sched)
+        db.session.commit()
     form = LocationForm(request.form)
 
     if form.validate_on_submit():
@@ -109,7 +131,8 @@ def home():
         times_dict = json.loads(times[13:])
         times = [i[11:] for i in times_dict['specific_datetimes']]
         #Update the current schedule session
-        sched = Schedule.query.order_by(Schedule.id.desc()).first()
+        user_scheds = Schedule.query.filter_by(name_id=user.id)
+        sched = user_scheds.order_by(Schedule.id.desc()).first()
         sched.location = LOC_GUIDS[form.location.data][0]
         sched.date_look_num = time_delta
         sched.date_look = look_for
@@ -127,16 +150,22 @@ def schedule():
     user = current_user
     user_scheds = Schedule.query.filter_by(name_id=user.id)
     sched = user_scheds.order_by(Schedule.id.desc()).first()
+    if sched.reminder == 'waiting':
+        warn = Markup('<b>Warning!</b> ')
+        flash(warn)
+        flash('Scheduler is currently running the above job. '
+              'If you would like to start a new job, '
+              'please cancel this one first.')
+        return redirect(url_for('home.scrape'))
     times = sched.all_times
     form = ScheduleForm(request.form)
     form.time_slot.choices = []
-    if times is None:
+    if times is None or sched.reminder is not None:
         return redirect(url_for('home.home'))
     for i, time in enumerate(times):
         form.time_slot.choices += [(i, time)]
     
     if form.validate_on_submit():
-        sched = Schedule.query.order_by(Schedule.id.desc()).first()
         sched.time_slot_num = form.time_slot.data
         slot = sched.all_times[int(form.time_slot.data)]
         sched.time_slot = slot
@@ -146,17 +175,18 @@ def schedule():
     else:
         return render_template('schedule.html', form=form, error=error)
     
-@home_blueprint.route('/running')
+@home_blueprint.route('/running', methods=["GET", "POST"])
 @login_required
 def scrape():
     error = None
     user = current_user
     user_scheds = Schedule.query.filter_by(name_id=user.id)
     sched = user_scheds.order_by(Schedule.id.desc()).first()
+    form = CancelForm()
     print(sched.reminder)
-    #FIX THIS
-    # if sched.reminder is not None and sched.reminder != 'waiting':
-    #     return redirect(url_for('home.home'))
+    if (sched.location is None or 
+        sched.reminder is not None and sched.reminder != 'waiting'):
+        return redirect(url_for('home.home'))
     date = datetime.fromisoformat(sched.date_look)
     date = date.strftime('%m/%d/%y')
     time = sched.time_slot
@@ -180,12 +210,27 @@ def scrape():
             print('Kaffeine turned on contents:\n%s' %kaf_pos.content)
         sched.reminder = 'waiting'
         db.session.commit()
-        thr = run_func(user.id)
-        if sched.reminder != 'waiting':
-            thr.join()
+        run_func(user.id)
+
     else:
-        pass
-    return render_template('running.html', data=data, error=error)
+        if form.validate_on_submit():
+            user_scheds = Schedule.query.filter_by(name_id=user.id)
+            sched = user_scheds.order_by(Schedule.id.desc()).first()
+            sched.reminder = 'cancel'
+            db.session.commit()
+            scheds = Schedule.query.filter_by(reminder='waiting').first()
+            if scheds is None:
+                kaf_pos = kaffeine_req(on=False)
+                print('Kaffeine turned off status: %d' %kaf_pos.status_code)
+                print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
+
+            return redirect(url_for('home.cancel'))
+    return render_template(
+            'running.html',
+            data=data, 
+            form=form,
+            error=error
+            )
 
 def run_func(user):
     thr = Thread(target=run_async_func, args=[app, user], daemon=True)
@@ -197,7 +242,7 @@ def run_async_func(app, user):
         result = scraper(user)
         return result
 
-@home_blueprint.route('/cancel')
+@home_blueprint.route('/cancel', methods=["GET", "POST"])
 @login_required
 def cancel():
     error = None
@@ -206,16 +251,11 @@ def cancel():
     sched = user_scheds.order_by(Schedule.id.desc()).first()
     status = sched.reminder
     if status == 'waiting':
-        sched.reminder = 'cancel'
-        db.session.commit()
-        scheds = Schedule.query.filter_by(reminder='waiting').first()
-        if scheds is None:
-            kaf_pos = kaffeine_req(on=False)
-            print('Kaffeine turned off status: %d' %kaf_pos.status_code)
-            print('Kaffeine turned off contents:\n%s' %kaf_pos.content)
-    else:
-        flash('You tried to cancel an already completed job. '
-              'No jobs currently running.')
-        return redirect(url_for('home.home'))
-        
+        warn = Markup('<b>Warning!</b> ')
+        flash(warn)
+        flash('Scheduler is currently running the above job. '
+              'If you would like to start a new job, '
+              'please cancel this one first.')
+        return redirect(url_for('home.scrape'))
+
     return render_template('cancel.html', error=error)

@@ -40,5 +40,6 @@ login_manager.login_view = "users.login"
 def load_user(user_id):
     return User.query.filter(User.id == int(user_id)).first()
 
+
 # if __name__ == 'main':
 #     app.run(host='0.0.0.0', port=os.environ.get('PORT'))

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask_wtf import FlaskForm
-from wtforms import SelectField
+from wtforms import SelectField, SubmitField
 #from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 #from wtforms.validators import DataRequired, InputRequired
 from wtforms.fields.html5 import DateField
@@ -30,17 +30,12 @@ class LocationForm(FlaskForm):
         )
     day = DateField('DatePicker', format='%Y-%m-%d')
     
-    
-# def get_times():
-#     sched = Schedule.query.order_by(Schedule.id.desc()).first()
-#     return sched
 
 class ScheduleForm(FlaskForm):
 
     time_slot = SelectField(
         'Time', choices=[])
+
+class CancelForm(FlaskForm):
     
-    # time_slot = QuerySelectField(
-    #     'Time', validators=[InputRequired(u'Please select a time')],
-    #     query_factory=get_times, get_label='all_times')
-    
+    submit = SubmitField('Cancel')
