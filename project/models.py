@@ -16,8 +16,6 @@ class Location(db.Model):
     id = db.Column(db.String(255), primary_key=True)
     name = db.Column(db.String(30), nullable=False)
     
-    
-    
     def __init__(self, id, name):
         self.id = id
         self.name = name

@@ -10,7 +10,6 @@ from project import db
 from project.models import Schedule, User
 import pytz
 from time import sleep
-from flask_login import current_user
 
 
 ET_URL = 'https://app.rockgympro.com/b/widget/?'
@@ -63,7 +62,7 @@ def kaffeine_req(on):
 
         kaf_pos = kaf_sess.post('https://kaffeine.herokuapp.com/register',
                                 data={'name':'earth-treks',
-                                      'nap':'true', 
+                                      'nap':'false', 
                                       'bedtime':'23:00'
                                       },
                                 headers=kaf_header,
